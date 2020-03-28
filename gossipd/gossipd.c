@@ -634,6 +634,7 @@ static struct io_plan *connectd_new_peer(struct io_conn *conn,
 		gs->timestamp_max = UINT32_MAX;
 
 		/* If they don't want initial sync, start at end of store */
+		status_debug("Peer requested Initial routing sync %s", peer->initial_routing_sync_feature ? "TRUE": "FALSE");
 		if (!peer->initial_routing_sync_feature)
 			lseek(gossip_store_fd, 0, SEEK_END);
 

@@ -633,6 +633,7 @@ const u8 *gossip_store_get_private_update(const tal_t *ctx,
 
 int gossip_store_readonly_fd(struct gossip_store *gs)
 {
+	status_debug("Gossip store filename %s", GOSSIP_STORE_FILENAME);
 	int fd = open(GOSSIP_STORE_FILENAME, O_RDONLY);
 
 	/* Skip over version header */
@@ -701,6 +702,7 @@ u32 gossip_store_load(struct routing_state *rstate, struct gossip_store *gs)
 			stats[0]++;
 			break;
 		case WIRE_CHANNEL_ANNOUNCEMENT:
+			status_debug("Loading channel announcement");
 			if (chan_ann) {
 				bad = "channel_announcement without amount";
 				goto badmsg;
@@ -710,12 +712,14 @@ u32 gossip_store_load(struct routing_state *rstate, struct gossip_store *gs)
 			chan_ann_off = gs->len;
 			break;
 		case WIRE_GOSSIP_STORE_PRIVATE_UPDATE:
+			status_debug("Loading channel private update");
 			if (!fromwire_gossip_store_private_update(tmpctx, msg, &msg)) {
 				bad = "invalid gossip_store_private_update";
 				goto badmsg;
 			}
 			/* fall thru */
 		case WIRE_CHANNEL_UPDATE:
+			status_debug("Loading channel update");
 			if (!routing_add_channel_update(rstate,
 							take(msg), gs->len,
 							NULL)) {
@@ -725,6 +729,7 @@ u32 gossip_store_load(struct routing_state *rstate, struct gossip_store *gs)
 			stats[1]++;
 			break;
 		case WIRE_NODE_ANNOUNCEMENT:
+			status_debug("Loading node announcement");
 			if (!routing_add_node_announcement(rstate,
 							   take(msg), gs->len,
 							   NULL, NULL)) {

@@ -81,6 +81,10 @@ u8 *gossip_store_next(const tal_t *ctx, struct per_peer_state *pps)
 	if (!pps->gs)
 		return NULL;
 
+
+	status_debug("Callign gossip store next");
+	//TODO: force-reinit gossip store
+	//lseek(pps->gossip_store_fd, 1, SEEK_SET);
 	while (!msg) {
 		struct gossip_hdr hdr;
 		u32 msglen, checksum, timestamp;
@@ -93,6 +97,7 @@ u8 *gossip_store_next(const tal_t *ctx, struct per_peer_state *pps)
 			if (r != 0)
 				undo_read(pps->gossip_store_fd, r, sizeof(hdr));
 			per_peer_state_reset_gossip_timer(pps);
+			status_debug("No gossip send!");
 			return NULL;
 		}
 
@@ -102,12 +107,14 @@ u8 *gossip_store_next(const tal_t *ctx, struct per_peer_state *pps)
 			lseek(pps->gossip_store_fd,
 			      be32_to_cpu(hdr.len) & GOSSIP_STORE_LEN_MASK,
 			      SEEK_CUR);
+			status_debug("Skip any deleted entries");
 			continue;
 		}
 
 		msglen = be32_to_cpu(hdr.len);
 		push = (msglen & GOSSIP_STORE_LEN_PUSH_BIT);
 		msglen &= GOSSIP_STORE_LEN_MASK;
+		status_debug("Length after mask clearance %d", msglen);
 
 		checksum = be32_to_cpu(hdr.crc);
 		timestamp = be32_to_cpu(hdr.timestamp);
@@ -116,6 +123,7 @@ u8 *gossip_store_next(const tal_t *ctx, struct per_peer_state *pps)
 		if (r != msglen) {
 			undo_read(pps->gossip_store_fd, r, msglen);
 			per_peer_state_reset_gossip_timer(pps);
+			status_debug("Failed read %d vs expected %d?", r, msglen);
 			return NULL;
 		}
 
@@ -137,12 +145,15 @@ u8 *gossip_store_next(const tal_t *ctx, struct per_peer_state *pps)
 		type = fromwire_peektype(msg);
 		if (type != WIRE_CHANNEL_ANNOUNCEMENT
 		    && type != WIRE_CHANNEL_UPDATE
-		    && type != WIRE_NODE_ANNOUNCEMENT)
+		    && type != WIRE_NODE_ANNOUNCEMENT) {
+			status_debug("don't send internal messages");
 			msg = tal_free(msg);
-		else if (!push && !timestamp_filter(pps, timestamp))
+		} else if (!push && !timestamp_filter(pps, timestamp)) {
+			status_debug("don't send if no push or timestamp_filter");
 			msg = tal_free(msg);
+		}
 	}
-
+        status_debug("Returning a message");
 	return msg;
 }
 

@@ -22,6 +22,7 @@ void sync_crypto_write(struct per_peer_state *pps, const void *msg TAKES)
 #endif
 	u8 *enc;
 
+	status_debug("Sending message to peer...");
 	status_peer_io(LOG_IO_OUT, NULL, msg);
 	enc = cryptomsg_encrypt_msg(NULL, &pps->cs, msg);
 
